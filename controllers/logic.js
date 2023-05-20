@@ -287,6 +287,111 @@ const getCommentsByPostId = async (req, res, next) => {
   }
 };
 
+const getLikesByPostId = async (req, res, next) => {
+  const postId = req.params.id;
+
+  try {
+    const query = "SELECT COUNT(*) AS like_count FROM likes WHERE postid = $1";
+    const values = [postId];
+
+    // Execute the query using the connection pool
+    const result = await pool.query(query, values);
+
+    // Extract the like count from the query result
+    const likeCount = result.rows[0].like_count;
+
+    res.json({ postId, likeCount });
+  } catch (error) {
+    console.error("Error retrieving like count:", error);
+    res.status(500).json({ error: "Unable to retrieve like count" });
+  }
+};
+
+const likePost = async (req, res, next) => {
+  const postId = req.params.id;
+  const userId = req.body.userId;
+  console.log("userId", userId);
+  const likeId = getRandomInteger();
+  try {
+    const query =
+      "INSERT INTO likes (likeid, postid, userid) VALUES ($1, $2, $3) RETURNING *";
+    const values = [likeId, postId, userId];
+
+    // Execute the query using the connection pool
+    const result = await pool.query(query, values);
+
+    // Extract the like count from the query result
+    const like = result.rows[0];
+
+    //current number of likes
+    const query2 = "SELECT COUNT(*) AS like_count FROM likes WHERE postid = $1";
+    const values2 = [postId];
+
+    // Execute the query using the connection pool
+    const result2 = await pool.query(query2, values2);
+
+    // Extract the like count from the query result
+    const likeCount = result2.rows[0].like_count;
+
+    res.json({ postId, like, likeCount });
+  } catch (error) {
+    console.error("Error liking post:", error);
+    res.status(500).json({ error: "Unable to like post" });
+  }
+};
+
+const unlikePost = async (req, res, next) => {
+  const postId = req.params.id;
+  const userId = req.body.userId;
+
+  try {
+    const query =
+      "DELETE FROM likes WHERE postid = $1 AND userid = $2 RETURNING *";
+    const values = [postId, userId];
+
+    // Execute the query using the connection pool
+    const result = await pool.query(query, values);
+
+    // Extract the like count from the query result
+    const like = result.rows[0];
+
+    //current number of likes
+    const query2 = "SELECT COUNT(*) AS like_count FROM likes WHERE postid = $1";
+    const values2 = [postId];
+    const result2 = await pool.query(query2, values2);
+    const likeCount = result2.rows[0].like_count;
+
+    res.json({ postId, like, likeCount });
+  } catch (error) {
+    console.error("Error unliking post:", error);
+    res.status(500).json({ error: "Unable to unlike post" });
+  }
+};
+
+const isLikedByUser = async (req, res, next) => {
+  const postId = req.params.postId;
+  const userId = req.params.userId;
+
+  try {
+    const query =
+      "SELECT EXISTS(SELECT 1 FROM likes WHERE postid = $1 AND userid = $2)";
+    const values = [postId, userId];
+
+    // Execute the query using the connection pool
+    const result = await pool.query(query, values);
+
+    // Check if the user has liked the post
+    const hasLiked = result.rows[0].exists;
+
+    res.json({ hasLiked });
+  } catch (error) {
+    console.error("Error checking if user has liked the post:", error);
+    res
+      .status(500)
+      .json({ error: "Unable to check if user has liked the post" });
+  }
+};
+
 module.exports = {
   check,
   uploadController,
@@ -300,4 +405,8 @@ module.exports = {
   getPostsByUserId,
   addComment,
   getCommentsByPostId,
+  getLikesByPostId,
+  likePost,
+  isLikedByUser,
+  unlikePost,
 };
