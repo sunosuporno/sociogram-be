@@ -21,12 +21,13 @@ const {
   likePost,
   isLikedByUser,
   unlikePost,
+  deletePostById,
 } = logic;
 
 router.get("/", check);
-router.get("/posts", getPosts);
+router.get("/posts/:id", getPosts);
 router.get("/user/:id", getUserById);
-router.get("/posts/:id", getPostsByUserId);
+router.post("/posts/:id", getPostsByUserId);
 router.get("/comments/:id", getCommentsByPostId);
 router.get("/likes/:id", getLikesByPostId);
 router.get("/isLiked/:postId/:userId", isLikedByUser);
@@ -39,5 +40,7 @@ router.post("/createPost", createPost);
 router.post("/addComment", addComment);
 router.post("/likePost/:id", likePost);
 router.post("/unlikePost/:id", unlikePost);
+
+router.delete("/deletePost/:id", deletePostById);
 
 module.exports = router;

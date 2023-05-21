@@ -220,6 +220,77 @@ const getPosts = async (req, res, next) => {
   try {
     const resPosts = await client.query(`SELECT * FROM posts`);
     const posts = resPosts.rows;
+    // for each post get the user firstname and profilepicture
+    for (let i = 0; i < posts.length; i++) {
+      const resUser = await client.query(
+        `SELECT firstname, profilepicture FROM users WHERE userid = ${posts[i].userid}`
+      );
+      const user = resUser.rows[0];
+      console.log(user);
+      posts[i].firstName = user.firstname;
+      posts[i].profilePicture = user.profilepicture;
+
+      // for each post get the comments
+      const resComments = await client.query(
+        `SELECT * FROM comments WHERE postid = ${posts[i].postid}`
+      );
+      const comments = resComments.rows;
+      posts[i].comments = comments;
+
+      // for each comment get the user firstname and profilepicture
+      for (let j = 0; j < comments.length; j++) {
+        const resUser = await client.query(
+          `SELECT firstname, profilepicture FROM users WHERE userid = ${comments[j].userid}`
+        );
+        const user = resUser.rows[0];
+        comments[j].firstName = user.firstname;
+        comments[j].profilePicture = user.profilepicture;
+
+        // for each comment fix the date format
+        const timestamp = new Date(comments[j].c_timestamp);
+        const formattedDate = timestamp.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "long",
+        });
+        const formattedTime = timestamp.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        });
+        comments[j].timestamp = formattedDate + " at " + formattedTime;
+      }
+
+      // for each post get the likes count
+      const resLikes = await client.query(
+        `SELECT COUNT(*) FROM likes WHERE postid = ${posts[i].postid}`
+      );
+      const likes = resLikes.rows[0].count;
+      posts[i].likes = likes;
+
+      // for each post get the liked status
+      const resLiked = await client.query(
+        `SELECT * FROM likes WHERE postid = ${posts[i].postid} AND userid = ${req.params.id}`
+      );
+      const liked = resLiked.rows[0];
+      if (liked) {
+        posts[i].isLiked = true;
+      } else {
+        posts[i].isLiked = false;
+      }
+
+      // for each post fix the date format
+      const timestamp = new Date(posts[i].timestamp);
+      const formattedDate = timestamp.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+      });
+      const formattedTime = timestamp.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      });
+      posts[i].timestamp = formattedDate + " at " + formattedTime;
+    }
     res.status(200).json(posts);
   } catch (error) {
     console.log(error);
@@ -238,6 +309,76 @@ const getPostsByUserId = async (req, res, next) => {
       `SELECT * FROM posts WHERE userid = ${userId}`
     );
     const posts = resPosts.rows;
+    for (let i = 0; i < posts.length; i++) {
+      const resUser = await client.query(
+        `SELECT firstname, profilepicture FROM users WHERE userid = ${posts[i].userid}`
+      );
+      const user = resUser.rows[0];
+      console.log(user);
+      posts[i].firstName = user.firstname;
+      posts[i].profilePicture = user.profilepicture;
+
+      // for each post get the comments
+      const resComments = await client.query(
+        `SELECT * FROM comments WHERE postid = ${posts[i].postid}`
+      );
+      const comments = resComments.rows;
+      posts[i].comments = comments;
+
+      // for each comment get the user firstname and profilepicture
+      for (let j = 0; j < comments.length; j++) {
+        const resUser = await client.query(
+          `SELECT firstname, profilepicture FROM users WHERE userid = ${comments[j].userid}`
+        );
+        const user = resUser.rows[0];
+        comments[j].firstName = user.firstname;
+        comments[j].profilePicture = user.profilepicture;
+
+        // for each comment fix the date format
+        const timestamp = new Date(comments[j].c_timestamp);
+        const formattedDate = timestamp.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "long",
+        });
+        const formattedTime = timestamp.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        });
+        comments[j].timestamp = formattedDate + " at " + formattedTime;
+      }
+
+      // for each post get the likes count
+      const resLikes = await client.query(
+        `SELECT COUNT(*) FROM likes WHERE postid = ${posts[i].postid}`
+      );
+      const likes = resLikes.rows[0].count;
+      posts[i].likes = likes;
+
+      // for each post get the liked status
+      const resLiked = await client.query(
+        `SELECT * FROM likes WHERE postid = ${posts[i].postid} AND userid = ${req.body.id}`
+      );
+      const liked = resLiked.rows[0];
+      if (liked) {
+        posts[i].isLiked = true;
+      } else {
+        posts[i].isLiked = false;
+      }
+
+      // for each post fix the date format
+      const timestamp = new Date(posts[i].timestamp);
+      const formattedDate = timestamp.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+      });
+      const formattedTime = timestamp.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      });
+      posts[i].timestamp = formattedDate + " at " + formattedTime;
+    }
     res.status(200).json(posts);
   } catch (error) {
     console.log(error);
@@ -260,7 +401,15 @@ const addComment = async (req, res, next) => {
     );
     const comment = resComment.rows[0];
     console.log(comment);
-    res.status(200).json(comment);
+
+    // get all comments for the post
+    const resComments = await client.query(
+      `SELECT * FROM comments WHERE postid = ${postId}`
+    );
+    const comments = resComments.rows;
+    console.log(comments);
+
+    res.status(200).json(comments);
   } catch (error) {
     console.log(error);
     next(error);
@@ -392,6 +541,24 @@ const isLikedByUser = async (req, res, next) => {
   }
 };
 
+const deletePostById = async (req, res, next) => {
+  const postId = req.params.id;
+  const client = await pool.connect();
+  try {
+    const resPost = await client.query(
+      `DELETE FROM posts WHERE postid = ${postId} RETURNING *`
+    );
+    const post = resPost.rows[0];
+    console.log(post);
+    res.status(200).json(post);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   check,
   uploadController,
@@ -409,4 +576,5 @@ module.exports = {
   likePost,
   isLikedByUser,
   unlikePost,
+  deletePostById,
 };
